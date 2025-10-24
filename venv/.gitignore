@@ -1,15 +1,59 @@
-# Ignore virtual environment
+# =============================
+# ⚙️ Python & Environment Files
+# =============================
 venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+*.joblib
+*.log
+*.tmp
 
-# Ignore data (large files)
+# =============================
+# 📊 Data & Model Files
+# =============================
 data/
 *.csv
+*.xlsx
+*.xls
 *.zip
+*.json
+*.h5
+models/
+*.model
+*.sav
 
-# Ignore cache and logs
-__pycache__/
-*.log
+# =============================
+# 💻 IDE & Editor Files
+# =============================
+.vscode/
+.idea/
+*.iml
 
-# Ignore system files
+# =============================
+# 🧪 Jupyter & Notebooks
+# =============================
+.ipynb_checkpoints/
+*.ipynb
+
+# =============================
+# 🖼️ Cache & Build Artifacts
+# =============================
+build/
+dist/
+*.egg-info/
+
+# =============================
+# 🧭 System Files
+# =============================
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# =============================
+# ⚡ Streamlit Specific
+# =============================
+.streamlit/config.toml
+.streamlit/secrets.toml
