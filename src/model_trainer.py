@@ -4,8 +4,15 @@ import pandas as pd
 import os
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression, LinearRegression
-from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, mean_squared_error
+from sklearn.metrics import (
+    confusion_matrix,
+    accuracy_score,
+    precision_score,
+    recall_score,
+    mean_squared_error,
+)
 import joblib
+
 
 def train_models(data_path, output_dir):
     print("📥 Loading engineered dataset...")
@@ -16,19 +23,18 @@ def train_models(data_path, output_dir):
     df.dropna(subset=["target", "close"], inplace=True)
 
     # Define features for Logistic Regression (exclude 'close')
-    log_features = [
+    features = [
         "open", "high", "low", "volume",
         "MA5", "MA10", "MA20", "Volatility", "RSI",
         "lag_close_1", "lag_pct_1"
     ]
 
-    # Replace infinities with NaN, then fill NaN with 0
-    df[log_features] = df[log_features].replace([float('inf'), -float('inf')], pd.NA)
-    df[log_features] = df[log_features].fillna(0)
+    # Replace infinities and fill NaN with 0
+    df[features] = df[features].replace([float('inf'), -float('inf')], pd.NA).fillna(0)
 
     # ---------------- Logistic Regression ----------------
-    print("\n⚙️ Training Logistic Regression model...")
-    X_log = df[log_features]
+    print("\n⚙️ Training Logistic Regression model (for UP/DOWN movement)...")
+    X_log = df[features]
     y_log = df["target"]
 
     X_train_log, X_test_log, y_train_log, y_test_log = train_test_split(
@@ -47,22 +53,16 @@ def train_models(data_path, output_dir):
 
     print("\n📊 Confusion Matrix (Logistic Regression):")
     print(cm)
-    print(f"\n✅ Accuracy: {acc:.4f}")
+    print(f"✅ Accuracy: {acc:.4f}")
     print(f"✅ Precision: {prec:.4f}")
     print(f"✅ Recall: {rec:.4f}")
 
     # ---------------- Linear Regression ----------------
-    print("\n⚙️ Training Linear Regression model for price prediction...")
+    print("\n⚙️ Training Linear Regression model (for price prediction)...")
 
-    lin_features = [
-        "open", "high", "low", "volume",
-        "MA5", "MA10", "MA20", "Volatility", "RSI",
-        "lag_close_1", "lag_pct_1"
-    ]
-    X_lin = df[lin_features]
+    X_lin = df[features]
     y_lin = df["close"]
 
-    # Clean Lin features too
     X_lin = X_lin.replace([float('inf'), -float('inf')], pd.NA).fillna(0)
 
     X_train_lin, X_test_lin, y_train_lin, y_test_lin = train_test_split(
@@ -74,18 +74,34 @@ def train_models(data_path, output_dir):
     y_pred_lin = lin_model.predict(X_test_lin)
 
     mse = mean_squared_error(y_test_lin, y_pred_lin)
-    print(f"\n💰 Linear Regression MSE: {mse:.6f}")  # realistic MSE
+    print(f"\n💰 Linear Regression MSE: {mse:.6f}")
 
     # ---------------- Save models ----------------
     os.makedirs(output_dir, exist_ok=True)
     joblib.dump(log_model, os.path.join(output_dir, "logistic_model.pkl"))
     joblib.dump(lin_model, os.path.join(output_dir, "linear_model.pkl"))
-    print(f"\n💾 Models saved to: {output_dir}")
+    print(f"\n💾 Models saved successfully to: {output_dir}")
 
-    print("\n✅ Training completed successfully. Script terminated.\n")
+    print("\n✅ Training completed successfully.\n")
 
 
 if __name__ == "__main__":
-    data_path = r"D:\Stock_Market_Analysis\data\engineered_stock_data.csv"
-    output_dir = r"D:\Stock_Market_Analysis\models"
-    train_models(data_path, output_dir)
+    # Use relative paths for flexibility
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(base_dir, "..", "data")
+    model_dir = os.path.join(base_dir, "..", "models")
+
+    # Prefer smaller dataset if available
+    sample_data_path = os.path.join(data_dir, "engineered_stock_data_sample.csv")
+    full_data_path = os.path.join(data_dir, "engineered_stock_data.csv")
+
+    if os.path.exists(sample_data_path):
+        data_path = sample_data_path
+        print("📁 Using lightweight sample dataset for faster training.")
+    elif os.path.exists(full_data_path):
+        data_path = full_data_path
+        print("⚠️ Using full dataset (large file). May take longer.")
+    else:
+        raise FileNotFoundError("❌ No dataset found in the 'data/' folder.")
+
+    train_models(data_path, model_dir)
