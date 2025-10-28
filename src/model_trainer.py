@@ -19,17 +19,14 @@ def train_models(data_path, output_dir):
     df = pd.read_csv(data_path)
 
     # ---------------- Clean data ----------------
-    # Drop rows with missing target or close
     df.dropna(subset=["target", "close"], inplace=True)
 
-    # Define features for Logistic Regression (exclude 'close')
     features = [
         "open", "high", "low", "volume",
         "MA5", "MA10", "MA20", "Volatility", "RSI",
         "lag_close_1", "lag_pct_1"
     ]
 
-    # Replace infinities and fill NaN with 0
     df[features] = df[features].replace([float('inf'), -float('inf')], pd.NA).fillna(0)
 
     # ---------------- Logistic Regression ----------------
@@ -63,8 +60,6 @@ def train_models(data_path, output_dir):
     X_lin = df[features]
     y_lin = df["close"]
 
-    X_lin = X_lin.replace([float('inf'), -float('inf')], pd.NA).fillna(0)
-
     X_train_lin, X_test_lin, y_train_lin, y_test_lin = train_test_split(
         X_lin, y_lin, test_size=0.2, random_state=42
     )
@@ -78,20 +73,29 @@ def train_models(data_path, output_dir):
 
     # ---------------- Save models ----------------
     os.makedirs(output_dir, exist_ok=True)
-    joblib.dump(log_model, os.path.join(output_dir, "logistic_model.pkl"))
-    joblib.dump(lin_model, os.path.join(output_dir, "linear_model.pkl"))
+
+    logistic_path = os.path.join(output_dir, "logistic_model.pkl")
+    linear_path = os.path.join(output_dir, "linear_model.pkl")
+
+    joblib.dump(log_model, logistic_path)
+    joblib.dump(lin_model, linear_path)
+
     print(f"\n💾 Models saved successfully to: {output_dir}")
+    print(f"📁 Logistic Model: {logistic_path}")
+    print(f"📁 Linear Model:   {linear_path}")
 
     print("\n✅ Training completed successfully.\n")
 
 
 if __name__ == "__main__":
-    # Use relative paths for flexibility
+    # Get project root (one level up from src/)
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    data_dir = os.path.join(base_dir, "..", "data")
-    model_dir = os.path.join(base_dir, "..", "models")
+    project_root = os.path.abspath(os.path.join(base_dir, ".."))
 
-    # Prefer smaller dataset if available
+    data_dir = os.path.join(project_root, "data")
+    model_dir = os.path.join(project_root, "models")
+
+    # Prefer sample dataset if exists
     sample_data_path = os.path.join(data_dir, "engineered_stock_data_sample.csv")
     full_data_path = os.path.join(data_dir, "engineered_stock_data.csv")
 
