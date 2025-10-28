@@ -27,79 +27,50 @@ elif os.path.exists(full_data_path):
     data_path = full_data_path
     st.warning("⚠️ Using full dataset (large file).")
 else:
-    st.error("❌ No dataset found. Please ensure the CSV exists in the 'data/' folder.")
+    st.error("❌ No dataset found. Please ensure a CSV exists in the 'data/' folder.")
     st.stop()
 
 df = pd.read_csv(data_path)
 
 st.title("📈 Stock Market Analysis Dashboard")
 
-# ---------------- Recent Stock Data ----------------
+# ---------------- Display Recent Stock Data ----------------
 st.subheader("Recent Stock Data (Last 50 Days)")
 recent_data = df.tail(50)
-st.dataframe(
-    recent_data[
-        ["symbol", "close", "MA5", "MA10", "Volatility", "RSI", "pct_change"]
-    ]
-)
+cols_to_show = [c for c in ["symbol", "close", "MA5", "MA10", "Volatility", "RSI", "pct_change"] if c in recent_data.columns]
+st.dataframe(recent_data[cols_to_show])
 
-# ---------------- User Input ----------------
+# ---------------- Sidebar Inputs ----------------
 st.sidebar.header("Input Stock Data for Prediction")
-open_price = st.sidebar.number_input("Open Price")
-high_price = st.sidebar.number_input("High Price")
-low_price = st.sidebar.number_input("Low Price")
-volume = st.sidebar.number_input("Volume")
-MA5 = st.sidebar.number_input("MA5")
-MA10 = st.sidebar.number_input("MA10")
-MA20 = st.sidebar.number_input("MA20")
-Volatility = st.sidebar.number_input("Volatility")
-RSI = st.sidebar.number_input("RSI")
-lag_close_1 = st.sidebar.number_input("Previous Close")
-lag_pct_1 = st.sidebar.number_input("Previous % Change")
 
-input_df = pd.DataFrame(
-    [
-        [
-            open_price,
-            high_price,
-            low_price,
-            volume,
-            MA5,
-            MA10,
-            MA20,
-            Volatility,
-            RSI,
-            lag_close_1,
-            lag_pct_1,
-        ]
-    ],
-    columns=[
-        "open",
-        "high",
-        "low",
-        "volume",
-        "MA5",
-        "MA10",
-        "MA20",
-        "Volatility",
-        "RSI",
-        "lag_close_1",
-        "lag_pct_1",
-    ],
-)
+fields = {
+    "open": "Open Price",
+    "high": "High Price",
+    "low": "Low Price",
+    "volume": "Volume",
+    "MA5": "MA5",
+    "MA10": "MA10",
+    "MA20": "MA20",
+    "Volatility": "Volatility",
+    "RSI": "RSI",
+    "lag_close_1": "Previous Close",
+    "lag_pct_1": "Previous % Change",
+}
+
+inputs = {k: st.sidebar.number_input(v, value=0.0) for k, v in fields.items()}
+input_df = pd.DataFrame([inputs])
 
 # ---------------- Prediction ----------------
 if st.button("Predict"):
     try:
-        # Logistic Regression → Next Day Movement
         movement = log_model.predict(input_df)[0]
         movement_label = "📈 UP" if movement == 1 else "📉 DOWN"
         st.subheader("Stock Movement Prediction:")
-        st.write(movement_label)
+        st.success(movement_label)
 
-        # Linear Regression → Predicted Close Price
         predicted_price = lin_model.predict(input_df)[0]
         st.subheader("Predicted Closing Price:")
-        st.write(round(predicted_price, 2))
+        st.info(f"💰 {round(predicted_price, 2)}")
+
     except Exception as e:
         st.error(f"❌ Prediction error: {e}")
