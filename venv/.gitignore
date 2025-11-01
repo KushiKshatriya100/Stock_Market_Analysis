@@ -1,63 +1,108 @@
-# =============================
-# ⚙️ Python & Environment Files
-# =============================
-venv/
+# =======================================
+# ⚙️ PYTHON ENVIRONMENT & DEPENDENCIES
+# =======================================
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.pkl
-*.joblib
+*.py[cod]
+*$py.class
+venv/
+.env/
+.venv/
+env/
+ENV/
+*.env
 *.log
 *.tmp
+*.bak
+*.swp
+*.sqlite3
 
-# =============================
-# 📊 Data & Model Files
-# =============================
+# =======================================
+# 🤖 MACHINE LEARNING FILES
+# =======================================
+# Model artifacts (saved models, checkpoints)
+models/
+!models/.gitkeep
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.onnx
+*.sav
+
+# =======================================
+# 📊 DATASETS
+# =======================================
 data/
-!data/engineered_stock_data_sample.csv   # Allow small sample dataset
+!data/engineered_stock_data_sample.csv   # keep one small example file only
 *.csv
 *.xlsx
 *.xls
 *.zip
 *.json
-*.h5
+*.parquet
 
-models/
-!models/.gitkeep                        # Keep folder structure in repo
-*.model
-*.sav
-*.pkl
-
-# =============================
-# 💻 IDE & Editor Files
-# =============================
+# =======================================
+# 💻 DEVELOPMENT / EDITOR FILES
+# =======================================
 .vscode/
 .idea/
 *.iml
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 
-# =============================
-# 🧪 Jupyter & Notebooks
-# =============================
-.ipynb_checkpoints/
+# =======================================
+# 🧪 JUPYTER NOTEBOOKS
+# =======================================
 *.ipynb
+.ipynb_checkpoints/
 
-# =============================
-# 🖼️ Cache & Build Artifacts
-# =============================
+# =======================================
+# 📦 BUILD, DIST & CACHE FILES
+# =======================================
 build/
 dist/
+.eggs/
 *.egg-info/
+*.spec
+.cache/
+__pypackages__/
+logs/
+*.out
+*.pid
 
-# =============================
-# 🧭 System Files
-# =============================
+# =======================================
+# 🧭 SYSTEM / OS FILES
+# =======================================
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# =============================
-# ⚡ Streamlit Specific
-# =============================
-.streamlit/config.toml
+# =======================================
+# ⚡ STREAMLIT & CONFIG FILES
+# =======================================
 .streamlit/secrets.toml
+.streamlit/config.toml
+.streamlit/
+.cache/
+
+# =======================================
+# 🧰 MISC EXCLUSIONS
+# =======================================
+*.tar.gz
+*.gz
+*.bz2
+*.tar
+*.7z
+*.rar
+
+# =======================================
+# ✅ INCLUDE THESE (safe to commit)
+# =======================================
+!README.md
+!requirements.txt
+!src/
+!app.py
+!utils/
+!config/

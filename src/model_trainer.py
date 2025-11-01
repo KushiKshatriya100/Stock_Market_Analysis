@@ -1,123 +1,97 @@
 # 📄 src/model_trainer.py
 
-import pandas as pd
 import os
-import numpy as np
+import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression, LinearRegression
-from sklearn.metrics import (
-    confusion_matrix,
-    accuracy_score,
-    precision_score,
-    recall_score,
-    mean_squared_error,
-)
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.metrics import mean_squared_error, accuracy_score
 import joblib
 
+def get_latest_data_file():
+    data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
+    live_files = [f for f in os.listdir(data_dir) if f.endswith("_live.csv")]
 
-def train_models(data_path, output_dir):
-    print("📥 Loading dataset...")
+    if live_files:
+        live_files = sorted(
+            live_files,
+            key=lambda f: os.path.getmtime(os.path.join(data_dir, f)),
+            reverse=True
+        )
+        latest_file = live_files[0]
+        print(f"📈 Using latest live dataset: {latest_file}")
+        return os.path.join(data_dir, latest_file)
+    else:
+        print("⚠️ No live data found. Using default engineered dataset.")
+        return os.path.join(data_dir, "engineered_stock_data.csv")
+
+
+def find_close_column(df):
+    """Try to identify the column that represents 'close' price."""
+    for col in df.columns:
+        if 'close' in col.lower():
+            return col
+    return None
+
+
+def train_models():
+    data_path = get_latest_data_file()
     df = pd.read_csv(data_path)
+    print(f"✅ Data loaded from: {data_path}")
+    print(f"🔢 Shape: {df.shape}")
 
-    # ---------------- Clean data ----------------
-    if "target" not in df.columns or "close" not in df.columns:
-        raise KeyError("❌ 'target' or 'close' column not found in dataset!")
+    # Drop non-numeric columns like Ticker, Date, etc.
+    df = df.select_dtypes(include=["number", "float64", "int64"])
 
-    df.dropna(subset=["target", "close"], inplace=True)
+    # Find close column dynamically
+    close_col = find_close_column(df)
+    if not close_col:
+        raise ValueError("❌ Could not find any 'Close'-related column in dataset!")
 
-    features = [
-        "open", "high", "low", "volume",
-        "MA5", "MA10", "MA20", "Volatility", "RSI",
-        "lag_close_1", "lag_pct_1"
-    ]
+    # ⚙️ If 'target' missing or has NaN, create it
+    if "target" not in df.columns or df["target"].isna().any():
+        print(f"⚠️ 'target' missing. Using '{close_col}' to generate it...")
+        df["target"] = (df[close_col].shift(-1) > df[close_col]).astype(int)
+        df.dropna(subset=["target"], inplace=True)
 
-    # Ensure all features exist
-    for col in features:
-        if col not in df.columns:
-            print(f"⚠️ Missing column '{col}', creating placeholder zeros.")
-            df[col] = 0
+    # Separate features & target
+    X = df.drop(columns=["target"])
+    y = df["target"]
 
-    # Replace inf and NaN
-    df[features] = df[features].replace([np.inf, -np.inf], np.nan).fillna(0)
+    # Handle missing values
+    X = X.replace([float("inf"), -float("inf")], 0).fillna(0)
+    y = y.fillna(0)
 
-    # ---------------- Logistic Regression ----------------
-    print("\n⚙️ Training Logistic Regression model (predicting UP/DOWN)...")
-    X_log = df[features]
-    y_log = df["target"].astype(int)
-
-    X_train_log, X_test_log, y_train_log, y_test_log = train_test_split(
-        X_log, y_log, test_size=0.2, random_state=42, stratify=y_log
+    # Train-test split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, shuffle=False
     )
 
-    log_model = LogisticRegression(max_iter=1000)
-    log_model.fit(X_train_log, y_train_log)
-    y_pred_log = log_model.predict(X_test_log)
+    # ----- Linear Regression -----
+    print("\n🚀 Training Linear Regression...")
+    lin_reg = LinearRegression()
+    lin_reg.fit(X_train, y_train)
+    y_pred_lin = lin_reg.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred_lin)
+    print(f"📊 Linear Regression MSE: {mse:.4f}")
 
-    # Metrics
-    cm = confusion_matrix(y_test_log, y_pred_log)
-    acc = accuracy_score(y_test_log, y_pred_log)
-    prec = precision_score(y_test_log, y_pred_log, zero_division=0)
-    rec = recall_score(y_test_log, y_pred_log, zero_division=0)
+    lin_path = os.path.join(os.path.dirname(__file__), "..", "models", "linear_model.pkl")
+    joblib.dump(lin_reg, lin_path)
+    print(f"💾 Saved linear model to: {lin_path}")
 
-    print("\n📊 Confusion Matrix (Logistic Regression):")
-    print(cm)
-    print(f"✅ Accuracy:  {acc:.4f}")
-    print(f"✅ Precision: {prec:.4f}")
-    print(f"✅ Recall:    {rec:.4f}")
+    # ----- Logistic Regression -----
+    print("\n🚀 Training Logistic Regression...")
+    log_reg = LogisticRegression(max_iter=1000)
+    log_reg.fit(X_train, y_train)
+    y_pred_log = log_reg.predict(X_test)
+    acc = accuracy_score(y_test, y_pred_log)
+    print(f"📈 Logistic Regression Accuracy: {acc:.4f}")
 
-    # ---------------- Linear Regression ----------------
-    print("\n⚙️ Training Linear Regression model (predicting Close Price)...")
+    log_path = os.path.join(os.path.dirname(__file__), "..", "models", "logistic_model.pkl")
+    joblib.dump(log_reg, log_path)
+    print(f"💾 Saved logistic model to: {log_path}")
 
-    X_lin = df[features]
-    y_lin = df["close"]
-
-    X_train_lin, X_test_lin, y_train_lin, y_test_lin = train_test_split(
-        X_lin, y_lin, test_size=0.2, random_state=42
-    )
-
-    lin_model = LinearRegression()
-    lin_model.fit(X_train_lin, y_train_lin)
-    y_pred_lin = lin_model.predict(X_test_lin)
-
-    mse = mean_squared_error(y_test_lin, y_pred_lin)
-    rmse = np.sqrt(mse)
-
-    print(f"\n💰 Linear Regression MSE:  {mse:.6f}")
-    print(f"💰 Linear Regression RMSE: {rmse:.6f}")
-
-    # ---------------- Save models ----------------
-    os.makedirs(output_dir, exist_ok=True)
-
-    logistic_path = os.path.join(output_dir, "logistic_model.pkl")
-    linear_path = os.path.join(output_dir, "linear_model.pkl")
-
-    joblib.dump(log_model, logistic_path)
-    joblib.dump(lin_model, linear_path)
-
-    print("\n💾 Models saved successfully:")
-    print(f"📁 Logistic Model: {logistic_path}")
-    print(f"📁 Linear Model:   {linear_path}")
-
-    print("\n✅ Training completed successfully!\n")
+    print("\n✅ Model training complete!")
 
 
 if __name__ == "__main__":
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.abspath(os.path.join(base_dir, ".."))
-
-    data_dir = os.path.join(project_root, "data")
-    model_dir = os.path.join(project_root, "models")
-
-    sample_data_path = os.path.join(data_dir, "engineered_stock_data_sample.csv")
-    full_data_path = os.path.join(data_dir, "engineered_stock_data.csv")
-
-    if os.path.exists(sample_data_path):
-        data_path = sample_data_path
-        print("📁 Using lightweight sample dataset for faster training.")
-    elif os.path.exists(full_data_path):
-        data_path = full_data_path
-        print("⚠️ Using full dataset (~50MB). This may take a while.")
-    else:
-        raise FileNotFoundError("❌ No dataset found in the 'data/' folder.")
-
-    train_models(data_path, model_dir)
+    train_models()
