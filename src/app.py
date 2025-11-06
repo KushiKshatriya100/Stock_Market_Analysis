@@ -41,6 +41,12 @@ live_file = next((f for f in os.listdir(data_dir) if f.endswith("_live.csv")), N
 test_file = next((f for f in os.listdir(data_dir) if f.endswith("_test.csv")), None)
 full_file = "engineered_stock_data.csv"
 
+# Streamlit Cloud friendly: use small CSV if on cloud
+if os.getenv("STREAMLIT_SERVER") is not None:
+    small_file = "combined_stock_data_small.csv"
+    if os.path.exists(os.path.join(data_dir, small_file)):
+        full_file = small_file
+
 if mode == "Live Data" and live_file:
     data_path = os.path.join(data_dir, live_file)
     st.sidebar.success(f"📡 Using Live dataset: {live_file}")
@@ -49,7 +55,7 @@ elif mode == "Test Data" and test_file:
     st.sidebar.info(f"🧪 Using Test dataset: {test_file}")
 elif os.path.exists(os.path.join(data_dir, full_file)):
     data_path = os.path.join(data_dir, full_file)
-    st.sidebar.warning("⚠️ Using full historical dataset.")
+    st.sidebar.warning(f"⚠️ Using full historical dataset: {full_file}")
 else:
     st.error("❌ No valid dataset found in 'data/' folder.")
     st.stop()
@@ -58,8 +64,14 @@ else:
 # 🧠 Load Data
 # ----------------------------------------------------------
 df = pd.read_csv(data_path)
-df.columns = [col.lower().strip() for col in df.columns]
+df.columns = [col.lower().strip() for col in df.columns]  # normalize column names
 df = df.ffill().bfill()
+
+# Check if 'close' exists
+if "close" not in df.columns:
+    st.error("❌ The 'close' column is missing in the dataset! "
+             "Please make sure your CSV has a 'close' column.")
+    st.stop()
 
 # ----------------------------------------------------------
 # 📈 Compute Technical Indicators (if not present)
@@ -119,6 +131,8 @@ if "close" in df.columns:
         height=400
     )
     st.plotly_chart(fig, use_container_width=True)
+else:
+    st.warning("⚠️ Close price chart cannot be displayed because 'close' column is missing.")
 
 st.markdown("---")
 
