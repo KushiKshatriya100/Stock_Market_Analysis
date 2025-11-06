@@ -19,7 +19,6 @@ ENV/
 # =======================================
 # 🤖 MACHINE LEARNING FILES
 # =======================================
-# Model artifacts (saved models, checkpoints)
 models/
 !models/.gitkeep
 *.pkl
