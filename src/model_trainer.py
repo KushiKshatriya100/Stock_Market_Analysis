@@ -1,11 +1,18 @@
 # 📄 src/model_trainer.py
+"""
+Improved Model Trainer — Balanced Random Forest
+✅ Balances target classes to avoid always predicting 'DOWN'.
+✅ Keeps same structure and output file.
+"""
 
 import os
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression, LogisticRegression
-from sklearn.metrics import mean_squared_error, accuracy_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.utils import resample
 import joblib
+
 
 def get_latest_data_file():
     data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -26,72 +33,81 @@ def get_latest_data_file():
 
 
 def find_close_column(df):
-    """Try to identify the column that represents 'close' price."""
     for col in df.columns:
         if 'close' in col.lower():
             return col
     return None
 
 
-def train_models():
+def train_random_forest():
     data_path = get_latest_data_file()
     df = pd.read_csv(data_path)
     print(f"✅ Data loaded from: {data_path}")
     print(f"🔢 Shape: {df.shape}")
 
-    # Drop non-numeric columns like Ticker, Date, etc.
     df = df.select_dtypes(include=["number", "float64", "int64"])
 
-    # Find close column dynamically
     close_col = find_close_column(df)
     if not close_col:
         raise ValueError("❌ Could not find any 'Close'-related column in dataset!")
 
-    # ⚙️ If 'target' missing or has NaN, create it
+    # Generate target (UP=1, DOWN=0)
     if "target" not in df.columns or df["target"].isna().any():
-        print(f"⚠️ 'target' missing. Using '{close_col}' to generate it...")
+        print(f"⚙️ Generating target column using '{close_col}'...")
         df["target"] = (df[close_col].shift(-1) > df[close_col]).astype(int)
         df.dropna(subset=["target"], inplace=True)
 
-    # Separate features & target
-    X = df.drop(columns=["target"])
-    y = df["target"]
+    # Balance dataset
+    print("⚖️ Balancing dataset to avoid bias...")
+    df_majority = df[df["target"] == 0]
+    df_minority = df[df["target"] == 1]
 
-    # Handle missing values
+    if len(df_minority) == 0:
+        raise ValueError("❌ No upward movements found — cannot train balanced model.")
+
+    df_minority_upsampled = resample(
+        df_minority,
+        replace=True,
+        n_samples=len(df_majority),
+        random_state=42
+    )
+
+    df_balanced = pd.concat([df_majority, df_minority_upsampled])
+    print(df_balanced["target"].value_counts())
+
+    # Split features/target
+    X = df_balanced.drop(columns=["target"])
+    y = df_balanced["target"]
+
     X = X.replace([float("inf"), -float("inf")], 0).fillna(0)
     y = y.fillna(0)
 
-    # Train-test split
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, shuffle=False
+        X, y, test_size=0.2, random_state=42, shuffle=True
     )
 
-    # ----- Linear Regression -----
-    print("\n🚀 Training Linear Regression...")
-    lin_reg = LinearRegression()
-    lin_reg.fit(X_train, y_train)
-    y_pred_lin = lin_reg.predict(X_test)
-    mse = mean_squared_error(y_test, y_pred_lin)
-    print(f"📊 Linear Regression MSE: {mse:.4f}")
+    print("\n🚀 Training Balanced Random Forest Classifier...")
+    rf_model = RandomForestClassifier(
+        n_estimators=150,
+        max_depth=10,
+        random_state=42,
+        n_jobs=-1
+    )
+    rf_model.fit(X_train, y_train)
 
-    lin_path = os.path.join(os.path.dirname(__file__), "..", "models", "linear_model.pkl")
-    joblib.dump(lin_reg, lin_path)
-    print(f"💾 Saved linear model to: {lin_path}")
+    # Evaluate
+    y_pred = rf_model.predict(X_test)
+    acc = accuracy_score(y_test, y_pred)
+    print(f"📊 Random Forest Accuracy: {acc:.4f}")
+    print("\n📋 Classification Report:")
+    print(classification_report(y_test, y_pred))
 
-    # ----- Logistic Regression -----
-    print("\n🚀 Training Logistic Regression...")
-    log_reg = LogisticRegression(max_iter=1000)
-    log_reg.fit(X_train, y_train)
-    y_pred_log = log_reg.predict(X_test)
-    acc = accuracy_score(y_test, y_pred_log)
-    print(f"📈 Logistic Regression Accuracy: {acc:.4f}")
+    model_path = os.path.join(os.path.dirname(__file__), "..", "models", "random_forest_model.pkl")
+    joblib.dump(rf_model, model_path)
+    print(f"💾 Model saved successfully to: {model_path}")
 
-    log_path = os.path.join(os.path.dirname(__file__), "..", "models", "logistic_model.pkl")
-    joblib.dump(log_reg, log_path)
-    print(f"💾 Saved logistic model to: {log_path}")
-
-    print("\n✅ Model training complete!")
+    print("\n✅ Model training complete and balanced!")
 
 
 if __name__ == "__main__":
-    train_models()
+    train_random_forest()
