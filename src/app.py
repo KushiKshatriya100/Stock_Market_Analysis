@@ -64,13 +64,13 @@ else:
 # 🧠 Load Data
 # ----------------------------------------------------------
 df = pd.read_csv(data_path)
-df.columns = [col.lower().strip() for col in df.columns]  # normalize column names
+# lowercase and strip column names
+df.columns = [col.lower().strip() for col in df.columns]
 df = df.ffill().bfill()
 
-# Check if 'close' exists
+# Ensure 'close' column exists
 if "close" not in df.columns:
-    st.error("❌ The 'close' column is missing in the dataset! "
-             "Please make sure your CSV has a 'close' column.")
+    st.error("❌ The 'close' column is missing in the dataset! Please make sure your CSV has a 'close' column.")
     st.stop()
 
 # ----------------------------------------------------------
