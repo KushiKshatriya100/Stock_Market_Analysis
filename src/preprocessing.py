@@ -1,6 +1,16 @@
-import pandas as pd
-import os
+# 📄 src/preprocessing.py — Clean & Combine Stock CSVs
+"""
+✅ Robust stock CSV preprocessing
+✅ Combines all stock files into one dataset
+✅ Adds derived features: pct_change, target
+✅ Safe numeric conversion, date parsing, sorting
+"""
 
+import os
+import pandas as pd
+
+
+# ---------- Preprocess single stock file ----------
 def preprocess_stock_data(file_path):
     """Clean and preprocess a single stock CSV file."""
     try:
@@ -16,11 +26,10 @@ def preprocess_stock_data(file_path):
             'high': 'high',
             'low': 'low',
             'close': 'close',
-            'volume': 'volume',  # 'total_trade_quantity' mapped to 'volume'
+            'volume': 'volume',
             'total_trade_quantity': 'volume',
             'totaltradedquantity': 'volume'
         }
-
         df.rename(columns=rename_map, inplace=True)
 
         # ✅ Filter only relevant columns
@@ -56,6 +65,7 @@ def preprocess_stock_data(file_path):
         return None
 
 
+# ---------- Combine all stock CSVs ----------
 def combine_all_stocks(data_dir):
     """Combine all stock CSVs into one clean dataset."""
     combined_data = []
@@ -88,10 +98,12 @@ def combine_all_stocks(data_dir):
     return final_df
 
 
+# ---------- Main ----------
 if __name__ == "__main__":
-    # ✅ Use dynamic base path so script works anywhere
+    # ✅ Dynamic base path
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(base_dir, "..", "data")
+    os.makedirs(data_dir, exist_ok=True)
 
     # 🔄 Combine all preprocessed data
     combined_df = combine_all_stocks(data_dir)
@@ -99,5 +111,4 @@ if __name__ == "__main__":
     # 💾 Save final combined dataset
     output_path = os.path.join(data_dir, "combined_stock_data.csv")
     combined_df.to_csv(output_path, index=False)
-
     print(f"💾 Combined dataset saved successfully → {output_path}")

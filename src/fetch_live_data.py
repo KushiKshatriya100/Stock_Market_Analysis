@@ -1,42 +1,41 @@
+# 📄 src/fetch_live_data.py — Simulated Live Stock Data Fetcher
 import os
 import time
 import pandas as pd
 from datetime import datetime
 import random
 
-# ✅ Directory setup
-data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
-os.makedirs(data_dir, exist_ok=True)
-
-stock_name = "RELIANCE_NS"
-file_path = os.path.join(data_dir, f"{stock_name}_live.csv")
+# ---------- Configuration ----------
+STOCK_NAME = "RELIANCE_NS"
+INTERVAL_SECONDS = 60  # Fetch every 60 seconds
+DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+FILE_PATH = os.path.join(DATA_DIR, f"{STOCK_NAME}_live.csv")
 
 print("📡 Live Data Fetcher Started...")
-print(f"💾 Writing live data to: {file_path}")
+print(f"💾 Writing live data to: {FILE_PATH}")
 
-# ✅ Initialize file if not exists
-if not os.path.exists(file_path):
-    df_init = pd.DataFrame(columns=["Datetime", "Close"])
-    df_init.to_csv(file_path, index=False)
+# ---------- Initialize file if not exists ----------
+if not os.path.exists(FILE_PATH):
+    df_init = pd.DataFrame(columns=["datetime", "close"])
+    df_init.to_csv(FILE_PATH, index=False)
 
+# ---------- Main Loop ----------
 try:
     while True:
-        # Simulate live stock price every 60 seconds (1 min interval)
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        close_price = round(random.uniform(2500, 2800), 2)
+        close_price = round(random.uniform(2500, 2800), 2)  # Simulate live price
 
-        # Create new row
         df_new = pd.DataFrame({
-            "Datetime": [now],
-            "Close": [close_price]
+            "datetime": [now],
+            "close": [close_price]
         })
 
-        # Append new data
-        df_new.to_csv(file_path, mode='a', index=False, header=False)
+        # Append new row safely
+        df_new.to_csv(FILE_PATH, mode='a', index=False, header=False)
         print(f"✅ New data added: {now} | Close: {close_price}")
 
-        # Sleep for 60 seconds before fetching again
-        time.sleep(60)
+        time.sleep(INTERVAL_SECONDS)
 
 except KeyboardInterrupt:
     print("\n🛑 Live data fetcher stopped manually.")

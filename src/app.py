@@ -39,13 +39,7 @@ data_path = None
 # Detect files automatically
 live_file = next((f for f in os.listdir(data_dir) if f.endswith("_live.csv")), None)
 test_file = next((f for f in os.listdir(data_dir) if f.endswith("_test.csv")), None)
-full_file = "engineered_stock_data.csv"
-
-# Streamlit Cloud friendly: use small CSV if on cloud
-if os.getenv("STREAMLIT_SERVER") is not None:
-    small_file = "combined_stock_data_small.csv"
-    if os.path.exists(os.path.join(data_dir, small_file)):
-        full_file = small_file
+full_file = "engineered_stock_data_sample.csv"  # small CSV for demo
 
 if mode == "Live Data" and live_file:
     data_path = os.path.join(data_dir, live_file)
@@ -64,7 +58,6 @@ else:
 # 🧠 Load Data
 # ----------------------------------------------------------
 df = pd.read_csv(data_path)
-# lowercase and strip column names
 df.columns = [col.lower().strip() for col in df.columns]
 df = df.ffill().bfill()
 
@@ -78,7 +71,7 @@ for col in expected_columns:
         df.rename(columns={candidates[0]: col}, inplace=True)
     else:
         st.error(f"❌ The '{col}' column is missing in the dataset! Please make sure your CSV has it.")
-        st.stop()
+        st.stop()   
 
 # ----------------------------------------------------------
 # 📈 Compute Technical Indicators (if not present)

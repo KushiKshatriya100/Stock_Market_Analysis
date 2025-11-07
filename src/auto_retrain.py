@@ -1,3 +1,4 @@
+# 📄 src/model_trainer.py — Auto Retrain Watcher for Random Forest Models
 import os
 import time
 import joblib
@@ -18,7 +19,6 @@ def get_file_hash(file_path):
     except Exception:
         return None
 
-
 # ---------- Function to get latest live data file ----------
 def get_latest_data_file():
     data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -26,6 +26,10 @@ def get_latest_data_file():
         os.makedirs(data_dir)
     live_files = [f for f in os.listdir(data_dir) if f.endswith("_live.csv")]
     if not live_files:
+        # fallback: use small sample CSV
+        sample_file = os.path.join(data_dir, "engineered_stock_data_sample.csv")
+        if os.path.exists(sample_file):
+            return sample_file
         return None
     live_files = sorted(
         live_files,
@@ -34,17 +38,19 @@ def get_latest_data_file():
     )
     return os.path.join(data_dir, live_files[0])
 
-
 # ---------- Core Model Training Function ----------
 def train_models(data_path):
     df = pd.read_csv(data_path)
+    df.columns = [col.lower().strip() for col in df.columns]  # lowercase for safety
+    df = df.ffill().bfill()
+
+    # Ensure numeric columns only
     df = df.select_dtypes(include=["number"])
 
-    # Handle missing or invalid target
+    # Generate target if missing
     if "target" not in df.columns or df["target"].isna().any():
-        print("⚠️ 'target' missing. Generating using Close vs lag_close_1...")
-        if "lag_close_1" in df.columns and "Close" in df.columns:
-            df["target"] = (df["Close"] > df["lag_close_1"]).astype(int)
+        if "lag_close_1" in df.columns and "close" in df.columns:
+            df["target"] = (df["close"] > df["lag_close_1"]).astype(int)
         else:
             df["target"] = 0
 
@@ -52,7 +58,7 @@ def train_models(data_path):
     y = df["target"].fillna(0)
     X = X.replace([float("inf"), -float("inf")], 0).fillna(0)
 
-    # Avoid single-class errors for classifier
+    # Avoid single-class errors
     unique_classes = y.unique()
     skip_classifier = False
     if len(unique_classes) < 2:
@@ -83,13 +89,11 @@ def train_models(data_path):
     if not skip_classifier:
         joblib.dump(rf_clf, os.path.join(models_dir, "rf_classifier.pkl"))
 
-    # ----- Summary -----
+    # ----- Logging -----
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"✅ Retrained at {timestamp}")
     print(f"📊 RandomForest Regressor MSE: {mse:.4f}")
     print(f"📈 RandomForest Classifier Accuracy: {acc:.4f}")
-
-    # ----- Logging -----
     with open(os.path.join(models_dir, "retrain_log.txt"), "a") as log_file:
         log_file.write(f"[{timestamp}] MSE={mse:.4f}, ACC={acc:.4f}\n")
 
@@ -102,7 +106,6 @@ def train_models(data_path):
         )
     except Exception:
         pass
-
 
 # ---------- Smart Watcher Logic ----------
 if __name__ == "__main__":
