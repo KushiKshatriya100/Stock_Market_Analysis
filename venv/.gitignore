@@ -20,7 +20,7 @@ ENV/
 # 🤖 MACHINE LEARNING FILES
 # =======================================
 models/
-!models/.gitkeep
+!models/.gitkeep   # Keep folder structure
 *.pkl
 *.joblib
 *.h5
@@ -32,7 +32,7 @@ models/
 # 📊 DATASETS
 # =======================================
 data/
-!data/engineered_stock_data_sample.csv   # keep one small example file only
+!data/engineered_stock_data_sample.csv   # Keep only small sample file
 *.csv
 *.xlsx
 *.xls
@@ -97,7 +97,7 @@ desktop.ini
 *.rar
 
 # =======================================
-# ✅ INCLUDE THESE (safe to commit)
+# ✅ FILES/FOLDERS TO INCLUDE
 # =======================================
 !README.md
 !requirements.txt
