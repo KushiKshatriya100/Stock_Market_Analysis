@@ -68,10 +68,17 @@ df = pd.read_csv(data_path)
 df.columns = [col.lower().strip() for col in df.columns]
 df = df.ffill().bfill()
 
-# Ensure 'close' column exists
-if "close" not in df.columns:
-    st.error("❌ The 'close' column is missing in the dataset! Please make sure your CSV has a 'close' column.")
-    st.stop()
+# ----------------------------------------------------------
+# 🔧 Auto-Rename Columns to Expected Names
+# ----------------------------------------------------------
+expected_columns = ["close", "open", "high", "low", "volume"]
+for col in expected_columns:
+    candidates = [c for c in df.columns if col in c.lower()]
+    if candidates:
+        df.rename(columns={candidates[0]: col}, inplace=True)
+    else:
+        st.error(f"❌ The '{col}' column is missing in the dataset! Please make sure your CSV has it.")
+        st.stop()
 
 # ----------------------------------------------------------
 # 📈 Compute Technical Indicators (if not present)
@@ -114,25 +121,22 @@ st.dataframe(recent_data[show_cols].round(3), use_container_width=True)
 # ----------------------------------------------------------
 # 📊 Price Chart
 # ----------------------------------------------------------
-if "close" in df.columns:
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=recent_data.index,
-        y=recent_data["close"],
-        mode="lines+markers",
-        line=dict(color="#2196F3", width=2),
-        name="Close Price"
-    ))
-    fig.update_layout(
-        title="📉 Last 50 Close Prices",
-        xaxis_title="Record Index",
-        yaxis_title="Price",
-        template="plotly_white",
-        height=400
-    )
-    st.plotly_chart(fig, use_container_width=True)
-else:
-    st.warning("⚠️ Close price chart cannot be displayed because 'close' column is missing.")
+fig = go.Figure()
+fig.add_trace(go.Scatter(
+    x=recent_data.index,
+    y=recent_data["close"],
+    mode="lines+markers",
+    line=dict(color="#2196F3", width=2),
+    name="Close Price"
+))
+fig.update_layout(
+    title="📉 Last 50 Close Prices",
+    xaxis_title="Record Index",
+    yaxis_title="Price",
+    template="plotly_white",
+    height=400
+)
+st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
 
